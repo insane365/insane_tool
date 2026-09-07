@@ -1,0 +1,22 @@
+{
+  "name": "Phantom Quality Tool",
+  "short_name": "Phantom Tool",
+  "description": "Binary Metadata Optimizer",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#020406",
+  "theme_color": "#020406",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "favicon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    },
+    {
+      "src": "favicon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
