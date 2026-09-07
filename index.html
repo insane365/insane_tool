@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="INSANE Quality Tool">
+    
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#020406">
+    
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="apple-touch-icon" href="favicon.png">
+    
+    <title>INSANE QUALITY TOOL</title>
+    <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@300;600;800&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- FFmpeg.wasm Engine for Video Re-encoding -->
+    <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
+
+    <style>
+        :root {
+            --bg-color: #03060a;
+            --liquid-glass: rgba(10, 15, 25, 0.65);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --glass-highlight: rgba(255, 255, 255, 0.15);
+            --neon-blue: #00f2ff;
+            --neon-green: #00ffaa;
+            --text-main: #ffffff;
+            --text-dim: rgba(255, 255, 255, 0.65);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+            position: relative;
+        }
+
+        .liquid-card {
+            background: var(--liquid-glass);
+            backdrop-filter: blur(40px) saturate(200%);
+            -webkit-backdrop-filter: blur(40px) saturate(200%);
+            border: 1px solid var(--glass-border);
+            border-top: 1px solid var(--glass-highlight);
+            border-radius: 30px; 
+            padding: 40px 30px;
+            width: 100%;
+            max-width: 380px;
+            text-align: center;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.8);
+            box-sizing: border-box;
+        }
+
+        h2 {
+            font-family: 'Exo 2', sans-serif;
+            font-size: 1.6rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            font-style: italic;
+            background: linear-gradient(135deg, #ffffff 0%, var(--neon-blue) 50%, var(--neon-green) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin: 0 auto 10px auto;
+        }
+
+        .subtitle { 
+            color: var(--text-dim); 
+            font-size: 0.8rem; 
+            margin-bottom: 25px; 
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .pill-btn {
+            width: 100%;
+            padding: 16px;
+            border-radius: 100px;
+            border: 1px solid rgba(255,255,255,0.1);
+            background: linear-gradient(135deg, rgba(255,255,255,0.95), rgba(255,255,255,0.85));
+            color: #000;
+            font-family: 'Exo 2', sans-serif;
+            font-weight: 800;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+        }
+
+        .pill-btn:hover { 
+            transform: translateY(-2px); 
+            box-shadow: 0 0 15px rgba(0, 242, 255, 0.3);
+        }
+
+        .btn-reset { 
+            background: rgba(255, 59, 48, 0.1) !important; 
+            color: #ff3b30 !important; 
+            border: 1px solid rgba(255, 59, 48, 0.3) !important; 
+            font-size: 0.8rem !important; 
+            padding: 14px !important; 
+        }
+
+        .file-box { 
+            background: rgba(0, 242, 255, 0.03); 
+            border: 1px dashed var(--glass-border); 
+            border-radius: 20px; 
+            padding: 20px; 
+            margin-bottom: 20px; 
+        }
+
+        input[type="file"] { 
+            color: var(--text-dim); 
+            font-size: 0.75rem; 
+            width: 100%; 
+        }
+
+        #status { margin-top: 15px; font-size: 0.75rem; font-weight: 700; min-height: 16px; word-break: break-word; }
+        .success { color: var(--neon-green); }
+        .error { color: #ff3b30; }
+        .info { color: var(--neon-blue); }
+    </style>
+</head>
+<body>
+
+    <div class="liquid-card">
+        <h2>INSANE QUALITY TOOL</h2>
+        <p class="subtitle">BINARY METADATA OPTIMIZER</p>
+
+        <div class="file-box">
+            <input type="file" id="fileInput" accept="video/mp4,video/quicktime,.mov,.MOV">
+        </div>
+
+        <button id="patchBtn" class="pill-btn">ENCODE & DOWNLOAD</button>
+        <button id="resetBtn" class="pill-btn btn-reset">RESET STORAGE</button>
+        <div id="status"></div>
+    </div>
+
+<script>
+    const { createFFmpeg, fetchFile } = FFmpeg;
+    let ffmpeg = null;
+
+    const patchBtn = document.getElementById('patchBtn');
+    const fileInput = document.getElementById('fileInput');
+    const statusDiv = document.getElementById('status');
+
+    function setStatus(msg, className) {
+        statusDiv.className = className;
+        statusDiv.innerText = msg;
+    }
+
+    if (patchBtn) {
+        patchBtn.addEventListener('click', async () => {
+            if (!fileInput.files || fileInput.files.length === 0) {
+                setStatus('PLEASE SELECT A VIDEO FILE FIRST!', 'error');
+                return;
+            }
+
+            const file = fileInput.files[0];
+            patchBtn.disabled = true;
+
+            try {
+                if (!ffmpeg) {
+                    setStatus('LOADING ENCODING ENGINE...', 'info');
+                    ffmpeg = createFFmpeg({ log: true });
+                    await ffmpeg.load();
+                }
+
+                setStatus('ENCODING & MODIFYING QUALITY...', 'info');
+
+                // Read input video into FFmpeg Virtual File System
+                const inputName = 'input.mov';
+                const outputName = 'optimized_output.mp4';
+                ffmpeg.FS('writeFile', inputName, await fetchFile(file));
+
+                // FFmpeg Encoding Command: Re-encoding H.264 video with high quality CRF & ultrafast preset
+                await ffmpeg.run(
+                    '-i', inputName,
+                    '-c:v', 'libx264',
+                    '-preset', 'ultrafast',
+                    '-crf', '18',
+                    '-c:a', 'aac',
+                    '-movflags', '+faststart',
+                    outputName
+                );
+
+                // Read output from FFmpeg virtual storage
+                const data = ffmpeg.FS('readFile', outputName);
+
+                // Create Blob & Trigger Download
+                const blob = new Blob([data.buffer], { type: 'video/mp4' });
+                const url = URL.createObjectURL(blob);
+
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `optimized_${file.name.split('.')[0]}.mp4`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+
+                // Clean up memory
+                ffmpeg.FS('unlink', inputName);
+                ffmpeg.FS('unlink', outputName);
+
+                setStatus('SUCCESSFULLY ENCODED & DOWNLOADED!', 'success');
+            } catch (err) {
+                console.error(err);
+                setStatus('ENCODING FAILED. TRY A SMALLER VIDEO.', 'error');
+            } finally {
+                patchBtn.disabled = false;
+            }
+        });
+    }
+
+    document.getElementById('resetBtn').addEventListener('click', () => {
+        fileInput.value = '';
+        setStatus('STORAGE RESET SUCCESSFULLY', 'success');
+        setTimeout(() => setStatus('', ''), 3000);
+    });
+</script>
+</body>
+</html>
