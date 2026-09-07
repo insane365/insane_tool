@@ -1,0 +1,711 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Phantom Quality Tool">
+    
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#020406">
+    
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="apple-touch-icon" href="favicon.png">
+    
+    <title>PHANTOM QUALITY TOOL</title>
+    <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@300;600;800&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <script>
+    const idbKeyval = (() => {
+      'use strict';
+      class Store {
+        constructor(dbName = 'keyval-store', storeName = 'keyval') {
+          this.storeName = storeName;
+          this._dbp = new Promise((resolve, reject) => {
+            const openreq = indexedDB.open(dbName, 1);
+            openreq.onerror = () => reject(openreq.error);
+            openreq.onsuccess = () => resolve(openreq.result);
+            openreq.onupgradeneeded = () => openreq.result.createObjectStore(storeName);
+          });
+        }
+        _withIDBStore(type, callback) {
+          return this._dbp.then(db => new Promise((resolve, reject) => {
+            const transaction = db.transaction(this.storeName, type);
+            transaction.oncomplete = () => resolve();
+            transaction.onabort = transaction.onerror = () => reject(transaction.error);
+            callback(transaction.objectStore(this.storeName));
+          }));
+        }
+      }
+      let defaultGetStore;
+      function getStore() { return defaultGetStore || (defaultGetStore = new Store()); }
+      return {
+        get: (key, store = getStore()) => {
+          let req;
+          return store._withIDBStore('readonly', s => { req = s.get(key); }).then(() => req.result);
+        },
+        set: (key, value, store = getStore()) => {
+          return store._withIDBStore('readwrite', s => { s.put(value, key); });
+        }
+      };
+    })();
+    </script>
+
+    <style>
+        :root {
+            --bg-color: #03060a;
+            --liquid-glass: rgba(10, 15, 25, 0.65);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --glass-highlight: rgba(255, 255, 255, 0.15);
+            --neon-blue: #00f2ff;
+            --neon-green: #00ffaa;
+            --text-main: #ffffff;
+            --text-dim: rgba(255, 255, 255, 0.65);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            padding-top: calc(20px + env(safe-area-inset-top));
+            padding-bottom: calc(20px + env(safe-area-inset-bottom));
+            padding-left: calc(20px + env(safe-area-inset-left));
+            padding-right: calc(20px + env(safe-area-inset-right));
+            overflow: hidden;
+            box-sizing: border-box;
+            position: relative;
+        }
+
+        /* Animated Background */
+        body::before, body::after {
+            content: '';
+            position: fixed;
+            width: 60vw;
+            height: 60vw;
+            border-radius: 50%;
+            filter: blur(140px);
+            z-index: -1;
+            opacity: 0.4;
+            animation: orb-float 20s infinite alternate ease-in-out;
+            pointer-events: none;
+        }
+
+        body::before {
+            background: radial-gradient(circle, var(--neon-blue) 0%, transparent 70%);
+            top: -20%;
+            left: -10%;
+            animation-duration: 25s;
+        }
+
+        body::after {
+            background: radial-gradient(circle, var(--neon-green) 0%, transparent 70%);
+            bottom: -20%;
+            right: -10%;
+            animation-duration: 30s;
+            animation-delay: -10s;
+        }
+
+        @keyframes orb-float {
+            0% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(10vw, 5vh) scale(1.2); }
+            100% { transform: translate(-5vw, -10vh) scale(0.9); }
+        }
+
+        @keyframes card-entry {
+            0% { opacity: 0; transform: translateY(40px) scale(0.95); }
+            100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .liquid-card {
+            background: var(--liquid-glass);
+            backdrop-filter: blur(40px) saturate(200%);
+            -webkit-backdrop-filter: blur(40px) saturate(200%);
+            border: 1px solid var(--glass-border);
+            border-top: 1px solid var(--glass-highlight);
+            border-left: 1px solid var(--glass-highlight);
+            border-radius: 30px; 
+            padding: 40px 30px;
+            width: 100%;
+            max-width: 380px;
+            text-align: center;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.8), inset 0 1px 1px rgba(255,255,255,0.05);
+            box-sizing: border-box;
+            animation: card-entry 1s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+            position: relative;
+            z-index: 1;
+            overflow: hidden;
+        }
+
+        .liquid-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%;
+            width: 50%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent);
+            transform: skewX(-25deg);
+            animation: shine 6s infinite;
+        }
+
+        @keyframes shine {
+            0% { left: -100%; }
+            20% { left: 200%; }
+            100% { left: 200%; }
+        }
+
+        h2 {
+            font-family: 'Exo 2', sans-serif;
+            font-size: 1.6rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            font-style: italic;
+            background: linear-gradient(135deg, #ffffff 0%, var(--neon-blue) 50%, var(--neon-green) 100%);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin: 0 auto 10px auto;
+            padding: 0;
+            overflow: visible;
+            display: block;
+            width: 100%;
+            text-align: center;
+            line-height: 1.3;
+            white-space: normal;
+            animation: text-gradient 4s linear infinite;
+        }
+
+        @keyframes text-gradient {
+            0% { background-position: 0% center; }
+            100% { background-position: 200% center; }
+        }
+
+        .subtitle { 
+            color: var(--text-dim); 
+            font-size: 0.8rem; 
+            margin-bottom: 30px; 
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .pill-btn {
+            width: 100%;
+            padding: 16px;
+            border-radius: 100px;
+            border: 1px solid rgba(255,255,255,0.1);
+            background: linear-gradient(135deg, rgba(255,255,255,0.95), rgba(255,255,255,0.85));
+            color: #000;
+            font-family: 'Exo 2', sans-serif;
+            font-weight: 800;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+            margin-bottom: 12px;
+            position: relative;
+            overflow: hidden;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .pill-btn::after {
+            content: '';
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 300px; height: 300px;
+            background: rgba(255,255,255,0.4);
+            border-radius: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            opacity: 0;
+            transition: transform 0.5s, opacity 1s;
+        }
+
+        .pill-btn:active::after {
+            transform: translate(-50%, -50%) scale(1);
+            opacity: 1;
+            transition: 0s;
+        }
+
+        .pill-btn:hover { 
+            transform: translateY(-2px); 
+            box-shadow: 0 15px 25px rgba(0,0,0,0.4), 0 0 15px rgba(0, 242, 255, 0.3);
+            border-color: #fff;
+        }
+        .pill-btn:active { transform: scale(0.97); }
+
+        .btn-reset { 
+            background: rgba(255, 59, 48, 0.1) !important; 
+            color: #ff3b30 !important; 
+            border: 1px solid rgba(255, 59, 48, 0.3) !important; 
+            font-size: 0.8rem !important; 
+            padding: 14px !important; 
+            box-shadow: none;
+        }
+        .btn-reset:hover {
+            background: rgba(255, 59, 48, 0.2) !important;
+            box-shadow: 0 10px 20px rgba(255, 59, 48, 0.2) !important;
+            border-color: rgba(255, 59, 48, 0.5) !important;
+        }
+        
+        /* Native Android Install Custom Trigger Button Styling */
+        .btn-android-install { 
+            display: none; 
+            background: linear-gradient(135deg, rgba(0, 242, 255, 0.15), rgba(0, 255, 170, 0.15)) !important; 
+            color: #ffffff !important; 
+            border: 1px solid rgba(0, 255, 170, 0.3) !important; 
+            font-size: 0.85rem !important; 
+            margin-top: 5px; 
+            margin-bottom: 15px; 
+        }
+        
+        .btn-android-install:hover {
+            background: linear-gradient(135deg, rgba(0, 242, 255, 0.25), rgba(0, 255, 170, 0.25)) !important; 
+            box-shadow: 0 10px 20px rgba(0, 255, 170, 0.2) !important;
+            border-color: rgba(0, 255, 170, 0.6) !important;
+        }
+        
+        .file-box { 
+            background: rgba(0, 242, 255, 0.03); 
+            border: 1px dashed var(--glass-border); 
+            border-radius: 20px; 
+            padding: 25px 20px; 
+            margin-bottom: 25px; 
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .file-box:hover {
+            border-color: var(--neon-blue);
+            background: rgba(0, 242, 255, 0.06);
+            box-shadow: inset 0 0 15px rgba(0, 242, 255, 0.1);
+        }
+
+        input[type="file"] { 
+            color: var(--text-dim); 
+            font-size: 0.75rem; 
+            width: 100%; 
+            outline: none;
+            cursor: pointer;
+        }
+
+        /* Customize file input button */
+        input[type="file"]::file-selector-button {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: #fff;
+            padding: 8px 16px;
+            border-radius: 50px;
+            margin-right: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+
+        input[type="file"]::file-selector-button:hover {
+            background: rgba(255,255,255,0.2);
+            border-color: #fff;
+        }
+
+        .credits-footer { margin-top: 35px; padding-top: 25px; border-top: 1px solid rgba(255, 255, 255, 0.08); }
+        .made-with { font-size: 0.7rem; letter-spacing: 3px; color: var(--text-dim); margin-bottom: 20px; font-weight: 600; }
+        .social-container { display: flex; flex-direction: row; gap: 15px; justify-content: center; align-items: center; }
+        .social-item { 
+            display: flex; align-items: center; justify-content: center; gap: 8px; 
+            text-decoration: none; padding: 10px 20px; 
+            border-radius: 50px; 
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.28); 
+        }
+        .social-item i { font-size: 1.2rem; }
+        .fa-tiktok { color: #fff; }
+        .fa-instagram { color: #ff006a; }
+        .social-username { font-family: 'Inter', sans-serif; color: var(--text-main); font-size: 0.85rem; font-weight: 600; }
+        .social-item:hover { 
+            transform: translateY(-5px); 
+            background: rgba(255, 255, 255, 0.1); 
+            border-color: rgba(255, 255, 255, 0.2);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+        }
+        .social-item:active { transform: scale(0.95); transition: 0.1s ease; }
+        #status { margin-top: 15px; font-size: 0.75rem; font-weight: 700; height: 16px; letter-spacing: 0.5px; }
+        .success { color: var(--neon-green); text-shadow: 0 0 10px rgba(0, 255, 170, 0.4); }
+        .error { color: #ff3b30; text-shadow: 0 0 10px rgba(255, 59, 48, 0.4); }
+        #app-content { display: none; }
+
+        @keyframes ripple-expand {
+            0% { transform: translate(-50%, -50%) scale(0.2); opacity: 1; }
+            100% { transform: translate(-50%, -50%) scale(5); opacity: 0; }
+        }
+        
+        .click-ripple {
+            position: fixed;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(0, 242, 255, 0.5) 0%, transparent 60%);
+            pointer-events: none;
+            z-index: 0;
+            animation: ripple-expand 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="particle-canvas" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -1; pointer-events: none;"></canvas>
+
+    <div id="auth-screen">
+        <div class="liquid-card">
+            <h2>SECURITY CHECK</h2>
+            <p id="auth-msg" class="subtitle">PHANTOM QUALITY TOOL</p>
+            
+            <button id="authBtn" class="pill-btn" onclick="requestKeyEntry()">ACTIVATE LICENSE</button>
+            
+            <button id="androidInstallBtn" class="pill-btn btn-android-install"><i class="fa-solid fa-download" style="margin-right: 8px; color: var(--neon-green)"></i> INSTALL PHANTOM APP</button>
+            
+            <div class="credits-footer">
+                <div class="made-with">MADE WITH ❤️ BY.</div>
+                <div class="social-container">
+                    <a href="https://www.tiktok.com/@faadiboii" target="_blank" class="social-item">
+                        <i class="fab fa-tiktok"></i>
+                        <span class="social-username">@faadiboii</span>
+                    </a>
+                    <a href="https://www.instagram.com/faadiboii" target="_blank" class="social-item">
+                        <i class="fab fa-instagram"></i>
+                        <span class="social-username">@faadiboii</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="app-content">
+        <div class="liquid-card" style="position: relative; overflow: hidden; padding-top: 45px;">
+            
+            <div id="usageAlertBanner" style="max-height: 0px; opacity: 0; overflow: hidden; background: rgba(255, 59, 48, 0.15); border: 0px solid rgba(255, 59, 48, 0.3); border-radius: 20px; margin-bottom: 0px; text-align: left; display: flex; align-items: center; gap: 12px; transition: max-height 0.5s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.4s ease, margin 0.5s ease, border 0.1s ease;">
+                <i class="fa-solid fa-triangle-exclamation" style="color: #ff3b30; font-size: 1.1rem; padding-left: 15px;"></i>
+                <div style="flex: 1; padding: 12px 15px 12px 0;">
+                    <h4 style="margin: 0; font-family: 'Exo 2', sans-serif; font-size: 0.8rem; font-weight: 800; color: #ff3b30; letter-spacing: 0.5px; text-transform: uppercase;">Daily Usage Limit</h4>
+                    <p style="margin: 2px 0 0 0; font-size: 0.68rem; color: rgba(255,255,255,0.8); font-weight: 400; line-height: 1.2;">To keep the website running smoothly, a daily usage limit is enforced. Each user gets 3 patches per day, so use them wisely!</p>
+                </div>
+            </div>
+
+            <h2>PHANTOM QUALITY TOOL</h2>
+            <p class="subtitle">BINARY METADATA OPTIMIZER</p>
+            
+            <div class="file-box"><input type="file" id="fileInput" accept="video/mp4,video/quicktime,.mov,.MOV"></div>
+            
+           <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--glass-border); border-radius: 20px; margin-bottom: 20px; text-align: left; overflow: hidden; display: grid; grid-template-rows: auto 0fr; transition: grid-template-rows 0.4s cubic-bezier(0.25, 1, 0.5, 1);">
+                
+                <button id="toggleGuideBtn" style="width: 100%; background: none; border: none; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; color: var(--text-main); font-family: 'Exo 2', sans-serif; font-size: 0.75rem; font-weight: 800; letter-spacing: 1px; cursor: pointer; text-transform: uppercase; outline: none;">
+                    <span><i class="fa-solid fa-circle-info" style="color: var(--neon-blue); margin-right: 8px;"></i> Processing Guidelines</span>
+                    <i id="guideChevron" class="fa-solid fa-chevron-down" style="transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1); color: var(--text-dim);"></i>
+                </button>
+                
+                <div style="overflow: hidden; background: rgba(0,0,0,0.2);">
+                    <div id="guideContent" style="padding: 0 20px 18px 20px; font-size: 0.7rem; color: var(--text-dim); line-height: 1.5; display: flex; flex-direction: column; gap: 10px;">
+                        <div style="display: flex; align-items: flex-start; gap: 8px; margin-top: 5px;">
+                            <i class="fa-solid fa-circle-check" style="color: var(--neon-green); margin-top: 2px;"></i>
+                            <span><strong>Optimal Performance:</strong> To ensure quick processing, it is recommended that video files remain below <b>300MB</b>. Please <b>Reset Storage</b> before patching any video.</span>
+                        </div>
+                        <div style="display: flex; align-items: flex-start; gap: 8px;">
+                            <i class="fa-solid fa-clock" style="color: var(--neon-blue); margin-top: 2px;"></i>
+                            <span><strong>Heavy Media Files (1GB+):</strong> If the file is larger than 1 GB, processing may take longer. Please stay on this page and wait <b>2–3 minutes</b> for it to load properly.</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <button id="patchBtn" class="pill-btn">PATCH & DOWNLOAD</button>
+            <button id="resetBtn" class="pill-btn btn-reset">RESET STORAGE</button>
+            <div id="status"></div>
+
+            <div class="credits-footer">
+                <div class="made-with">MADE WITH ❤️ BY.</div>
+                <div class="social-container">
+                    <a href="https://www.tiktok.com/@faadiboii" target="_blank" class="social-item">
+                        <i class="fab fa-tiktok"></i>
+                        <span class="social-username">@faadiboii</span>
+                    </a>
+                    <a href="https://www.instagram.com/faadiboii" target="_blank" class="social-item">
+                        <i class="fab fa-instagram"></i>
+                        <span class="social-username">@faadiboii</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    if (androidBtn) {
+        androidBtn.addEventListener('click', async () => {
+            if (!deferredInstallPrompt) return;
+            
+            // Pop the official Google Play lookalike app system layout on screen
+            deferredInstallPrompt.prompt();
+            
+            // Wait for the user execution state response
+            const { outcome } = await deferredInstallPrompt.userChoice;
+            if (outcome === 'accepted') {
+                console.log('User deployed the app onto their Android device container.');
+            }
+            
+            // Dissolve the setup prompt element completely
+            deferredInstallPrompt = null;
+            androidBtn.style.display = 'none';
+        });
+    }
+
+    // Clean execution confirmation flag if app is already running inside Standalone PWA view
+    window.addEventListener('appinstalled', () => {
+        if (androidBtn) androidBtn.style.display = 'none';
+        deferredInstallPrompt = null;
+    });
+
+       function requestKeyEntry() {
+        const userKey = prompt("Enter License Key:");
+        if (userKey) runDecryptionPipeline(userKey);
+    }
+
+    async function runDecryptionPipeline(licenseKey) {
+        const authMsg = document.getElementById('auth-msg');
+        const authBtn = document.getElementById('authBtn');
+
+        if (authBtn.disabled || authBtn.innerText === "VERIFYING...") return;
+
+        if(authMsg) {
+            authMsg.innerText = "Verifying Identity...";
+            authMsg.style.color = "#00f2ff";
+        }
+
+        authBtn.disabled = true;
+        authBtn.style.opacity = "0.5";
+        authBtn.style.cursor = "not-allowed";
+        authBtn.innerText = "VERIFYING...";
+
+        const fingerprint = navigator.userAgent + window.screen.width + window.screen.height + navigator.language;
+        
+        try {
+            const response = await fetch(SUPABASE_ENDPOINT_URL, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    action: "verify",
+                    key: licenseKey,
+                    info: fingerprint
+                })
+            });
+
+            if (result.FAILED) {
+                const encResponse = await fetch('app.enc');
+                const packet = await encResponse.json();
+
+                const cipherBytes = new Uint8Array(packet.ciphertext.match(/.{1,2}/g).map(b => parseInt(b, 16)));
+                const ivBytes = new Uint8Array(packet.iv.match(/.{1,2}/g).map(b => parseInt(b, 16)));
+                const saltBytes = new Uint8Array(packet.salt.match(/.{1,2}/g).map(b => parseInt(b, 16)));
+                const tagBytes = new Uint8Array(packet.tag.match(/.{1,2}/g).map(b => parseInt(b, 16)));
+
+                const combinedPayload = new Uint8Array(cipherBytes.length + tagBytes.length);
+                combinedPayload.set(cipherBytes);
+                combinedPayload.set(tagBytes, cipherBytes.length);
+
+                const encoder = new TextEncoder();
+                const rawMaterial = await crypto.subtle.importKey("raw", encoder.encode(HARDCODED_PASS), "PBKDF2", false, ["deriveKey"]);
+                const decryptionKey = await crypto.subtle.deriveKey(
+                    { name: "PBKDF2", salt: saltBytes, iterations: 100000, hash: "SHA-256" },
+                    rawMaterial, { name: "AES-GCM", length: 256 }, false, ["decrypt"]
+                );
+
+                const clearBuffer = await crypto.subtle.decrypt({ name: "AES-GCM", iv: ivBytes, tagLength: 128 }, decryptionKey, combinedPayload);
+                let clearTextScript = new TextDecoder().decode(clearBuffer);
+
+                localStorage.setItem('phantom_key', licenseKey);
+
+                // --- HYPER JUMP TRANSITION ---
+                if (window.particleWarp) {
+                    window.particleWarp(25);
+                    setTimeout(() => window.particleWarp(1), 800);
+                }
+
+                // Delay removing the auth screen to sync with jump (at 500ms)
+                setTimeout(() => {
+                    const authScreen = document.getElementById('auth-screen');
+                    if(authScreen) authScreen.remove();
+
+                    const bootstrapper = new Function(clearTextScript);
+                    bootstrapper();
+
+                    setTimeout(() => {
+                        const slideBanner = document.getElementById('usageAlertBanner');
+                        if (slideBanner) {
+                            slideBanner.style.maxHeight = "100px";
+                            slideBanner.style.opacity = "1";
+                            slideBanner.style.marginBottom = "20px";
+                            slideBanner.style.borderWidth = "1px";
+                            
+                            setTimeout(() => {
+                                slideBanner.style.maxHeight = "0px";
+                                slideBanner.style.opacity = "0";
+                                slideBanner.style.marginBottom = "0px";
+                                slideBanner.style.borderWidth = "0px";
+                            }, 6000);
+                        }
+                    }, 300);
+
+                    clearTextScript = null;
+                }, 500);
+            } else {
+                alert(result.message || "Invalid Key!");
+                if(authMsg) {
+                    authMsg.innerText = "PHANTOM QUALITY TOOL";
+                    authMsg.style.color = "rgba(255, 255, 255, 0.6)";
+                }
+                authBtn.disabled = false;
+                authBtn.style.opacity = "1";
+                authBtn.style.cursor = "pointer";
+                authBtn.innerText = "ACTIVATE LICENSE";
+            }
+       
+    // Background Interactivity - Particle System
+    document.addEventListener('DOMContentLoaded', () => {
+        const canvas = document.getElementById('particle-canvas');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+        let w, h;
+        let mouse = { x: null, y: null, active: false };
+
+        const resize = () => {
+            w = canvas.width = window.innerWidth;
+            h = canvas.height = window.innerHeight;
+            
+            particles = [];
+            // Optimize for mobile by limiting particle count
+            let count = Math.min(100, Math.floor((w * h) / 10000));
+            for (let i = 0; i < count; i++) {
+                particles.push(new Particle());
+            }
+        };
+        window.addEventListener('resize', resize);
+
+        class Particle {
+            constructor() {
+                this.x = Math.random() * (w || window.innerWidth);
+                this.y = Math.random() * (h || window.innerHeight);
+                this.vx = (Math.random() - 0.5) * 1.5;
+                this.vy = (Math.random() - 0.5) * 1.5;
+                this.baseSize = Math.random() * 1.5 + 0.5;
+                this.size = this.baseSize;
+            }
+            update() {
+                this.x += this.vx * window._warpSpeed;
+                this.y += this.vy * window._warpSpeed;
+                
+                if (this.x < 0 || this.x > w) this.vx *= -1;
+                if (this.y < 0 || this.y > h) this.vy *= -1;
+                
+                if (mouse.active) {
+                    let dx = mouse.x - this.x;
+                    let dy = mouse.y - this.y;
+                    let dist = Math.sqrt(dx*dx + dy*dy);
+                    if (dist < 120) {
+                        this.x -= (dx / dist) * 2;
+                        this.y -= (dy / dist) * 2;
+                    }
+                }
+            }
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(0, 242, 255, 0.7)';
+                ctx.fill();
+            }
+        }
+
+        window._warpSpeed = 1;
+        window.particleWarp = (speed) => { window._warpSpeed = speed; };
+
+        resize();
+
+        const animate = () => {
+            ctx.clearRect(0, 0, w, h);
+            
+            for (let i = 0; i < particles.length; i++) {
+                for (let j = i; j < particles.length; j++) {
+                    let dx = particles[i].x - particles[j].x;
+                    let dy = particles[i].y - particles[j].y;
+                    let dist = dx*dx + dy*dy;
+                    if (dist < 12000) {
+                        ctx.beginPath();
+                        ctx.strokeStyle = `rgba(0, 255, 170, ${0.4 - dist/30000})`;
+                        ctx.lineWidth = 0.8;
+                        ctx.moveTo(particles[i].x, particles[i].y);
+                        ctx.lineTo(particles[j].x, particles[j].y);
+                        ctx.stroke();
+                    }
+                }
+            }
+            
+            particles.forEach(p => { p.update(); p.draw(); });
+            requestAnimationFrame(animate);
+        };
+        animate();
+
+        // Interaction Listeners
+        const updateMouse = (e) => {
+            let clientX = e.clientX;
+            let clientY = e.clientY;
+            if (clientX === undefined && e.touches && e.touches.length > 0) {
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+            }
+            if (clientX !== undefined) {
+                mouse.x = clientX;
+                mouse.y = clientY;
+            }
+        };
+
+        document.addEventListener('mousemove', (e) => { mouse.active = true; updateMouse(e); });
+        document.addEventListener('touchmove', (e) => { mouse.active = true; updateMouse(e); }, {passive: true});
+        document.addEventListener('mouseleave', () => mouse.active = false);
+        document.addEventListener('touchend', () => { setTimeout(() => mouse.active = false, 1000); });
+
+        // Ripple Effect on Click
+        const triggerRipple = (e) => {
+            let clientX = e.clientX;
+            let clientY = e.clientY;
+            if (clientX === undefined && e.changedTouches && e.changedTouches.length > 0) {
+                clientX = e.changedTouches[0].clientX;
+                clientY = e.changedTouches[0].clientY;
+            }
+            if (clientX === undefined || clientY === undefined) return;
+
+            const ripple = document.createElement('div');
+            ripple.className = 'click-ripple';
+            ripple.style.left = `${clientX}px`;
+            ripple.style.top = `${clientY}px`;
+            ripple.style.width = '150px';
+            ripple.style.height = '150px';
+            document.body.appendChild(ripple);
+            setTimeout(() => { if (ripple.parentNode) ripple.remove(); }, 800);
+
+            // Brief particle warp
+            window.particleWarp(4);
+            setTimeout(() => window.particleWarp(1), 600);
+        };
+
+        window.addEventListener('click', triggerRipple);
+        window.addEventListener('touchstart', triggerRipple, {passive: true});
+    });
+</script>
+</body>
+</html>
